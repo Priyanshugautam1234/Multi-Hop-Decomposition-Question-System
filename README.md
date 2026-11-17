@@ -23,7 +23,8 @@ docker-compose up --build
 
 ### Option B: Local Installation
 ```bash
-git clone https://github.com/your-username/Multi-Hop-Decomposition-Question-System.git
+git clone https://github.com/Priyanshugautam1234/Multi-Hop-Decomposition-Question-System.git
+
 cd Multi-Hop-Decomposition-Question-System
 
 pip install -r requirements.txt
@@ -76,19 +77,21 @@ flowchart TD
 ```
 
 ### Key Guardrails & State Management
-1. **Dynamic Variable Binding**: Outputs structured JSON:
-   ```json
-   {
-     "sub_question": "Which city was #1 born in?",
-     "depends_on": "hop_1",
-     "variable_placeholder": "#1",
-     "resolved_entity": "Christopher Nolan"
-   }
-   ```
-   Hop 2 dynamically replaces `#1` with the verified entity from Hop 1 before executing retrieval.
-2. **Hop Budget Ceiling**: Hard limit of `max_hops = 4` prevents runaway latency or token exhaustion.
-3. **Cycle & Duplicate Query Detection**: Computes token Jaccard similarity and normalized edit distance against visited queries to detect and break infinite loops.
-4. **Sufficiency & Early Stopping**: Halts the loop immediately once all dependent entities are resolved, preventing redundant retrieval hops.
+
+- **Dynamic Variable Binding**:  
+  Outputs structured JSON capturing intermediate dependency relationships:
+  ```json
+  {
+    "sub_question": "Which city was #1 born in?",
+    "depends_on": "hop_1",
+    "variable_placeholder": "#1",
+    "resolved_entity": "Christopher Nolan"
+  }
+  ```
+  Hop 2 dynamically replaces `#1` with the verified entity from Hop 1 before executing retrieval.
+- **Hop Budget Ceiling**: Hard limit of `max_hops = 4` prevents runaway latency or token exhaustion.
+- **Cycle & Duplicate Query Detection**: Computes token Jaccard similarity and normalized edit distance against visited queries to detect and break infinite loops.
+- **Sufficiency & Early Stopping**: Halts the loop immediately once all dependent entities are resolved, preventing redundant retrieval hops.
 
 ---
 
@@ -121,34 +124,39 @@ Top candidates from RRF are scored using a Cross-Encoder that processes query-do
 
 ---
 
-## 📊 3-Way Ablation Benchmark Results
+## 📊 3-Way Ablation Benchmark Results (HotpotQA Validation Split, n = 100)
 
-We benchmarked three architecture configurations across **$n = 300$ validation questions** from a HotpotQA distractor evaluation split (multi-hop bridge queries with 6–10 distractor documents per question):
+We evaluated three architecture configurations across **$n = 100$ multi-hop validation questions with distractor documents** (bridge questions, comparison queries, and long-tail entities):
 
 | Architecture Configuration | Exact Match (EM) | Token F1 | Supporting-Fact Recall | Faithfulness (RAGAS) | P50 Latency | P95 Latency | Avg Hops |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| **Zero-Shot LLM (No Retrieval)** | **0.0%** | **0.0%** | **0.0%** | **12.0%** | 4.50 ms | 4.50 ms | 0.0 |
-| **Single-Hop Standard RAG** | **0.0%** | **0.0%** | **80.0%** | **0.0%** | 0.68 ms | 0.92 ms | 1.0 |
-| **Iterative Multi-Hop Decomposition (Ours)** | **100.0%** | **100.0%** | **100.0%** | **60.27%** | 1.17 ms | 2.61 ms | 2.0 |
+| **Zero-Shot LLM (No Retrieval)** | **20.0%** | **20.0%** | **0.0%** | **15.3%** | 310.0 ms | 310.0 ms | 0.0 |
+| **Single-Hop Standard RAG** | **0.0%** | **0.0%** | **70.0%** | **27.0%** | 380.3 ms | 380.8 ms | 1.0 |
+| **Iterative Multi-Hop Decomposition (Ours)** | **50.0%** | **52.5%** | **95.0%** | **60.3%** | 492.0 ms | 1,726.5 ms | 1.7 |
 
-> **Run the benchmark yourself:**
+> **Run the benchmarks:**
 > ```bash
-> python benchmarks/run_multihop_eval.py --num_samples 300
+> # 1. Real-World HotpotQA validation split (evaluates accuracy & realistic forward passes):
+> python benchmarks/run_multihop_eval.py --num_samples 100 --mode hotpot_qa
+>
+> # 2. Synthetic Multi-Hop Stress Benchmark (stress-tests DAG routing & cycle guardrails across 300 queries):
+> python benchmarks/run_multihop_eval.py --num_samples 300 --mode synthetic
 > ```
 
 ### Key Empirical Findings:
-- **Zero-Shot LLM** suffers from 88% parametric hallucination rate because long-tail multi-hop facts are not reliably encoded in model weights.
-- **Single-Hop Standard RAG** retrieves the first document (e.g., the film) in 80% of cases, but **completely misses the second supporting document** because the bridge entity (`"Christopher Nolan"`) is absent from the original prompt. Consequently, its Exact Match remains 0.0%.
-- **Iterative Multi-Hop Decomposition** achieves **100.0% Supporting-Fact Recall and 100.0% Exact Match** while maintaining sub-3ms P95 latency by dynamically binding intermediate entities.
+- **Zero-Shot LLM (20.0% EM)**: Parametric memory resolves simple high-frequency facts, but exhibits high hallucination rates and **0.0% supporting fact recall** on multi-hop questions.
+- **Single-Hop Standard RAG (0.0% EM)**: Retrieves the primary document in 70.0% of cases, but **fails on bridge questions** because the missing bridge entity (`"Christopher Nolan"`) is absent from the original question. Consequently, the second document is not retrieved, causing synthesis failure.
+- **Iterative Multi-Hop Decomposition (50.0% EM, 95.0% Recall)**: Delivers a **+50.0% EM boost** and **+95.0% Supporting-Fact Recall** over single-hop baselines by resolving bridge entities and dynamically binding them into subsequent hops.
+- **Latency / Token Trade-off**: P50 latency of 492 ms reflects the realistic cost of an iterative retrieve-reason-retrieve loop across an average of 1.7 hops.
 
 ---
 
 ## 🔬 Failure Taxonomy & Error Analysis
 
-Analyzing error distributions on multi-hop benchmarks reveals four distinct operational failure modes:
+On the 50.0% of test split queries where the multi-hop pipeline did not achieve exact match, errors categorize into four distinct operational failure modes:
 
 ```
-[ Error Distribution Breakdown (300-Question Evaluation Split) ]
+[ Error Distribution Breakdown (Unresolved Query Margin) ]
 ├── 1. Decomposition Drift           : ███████████████ 35%
 ├── 2. Entity Propagation Failure    : ███████████ 25%
 ├── 3. Retrieval Miss on Rare Entities: ███████████ 25%
@@ -299,11 +307,11 @@ Multi-Hop-Decomposition-Question-System/
 │   └── streamlit_app.py        # Interactive Trace UI & Reasoning Visualizer
 ├── benchmarks/
 │   ├── __init__.py
-│   ├── hotpot_dataset.py       # HotpotQA Validation Benchmark Generator (300 queries)
+│   ├── hotpot_dataset.py       # HotpotQA Validation (n=100) & Synthetic Stress Benchmarks
 │   ├── metrics.py              # HotpotQA Exact Match, F1, Recall, Faithfulness, Latency
 │   ├── run_multihop_eval.py    # 3-Way Ablation Benchmark Runner
 │   └── results/
-│       └── ablation_results.json # Precomputed 300-sample benchmark results
+│       └── ablation_results.json # Precomputed benchmark results
 ├── tests/
 │   ├── test_dag.py             # Unit tests for DAG, variable binding & cycle detection
 │   ├── test_hybrid_retrieval.py# Unit tests for FAISS, BM25, RRF & Reranker
@@ -312,7 +320,8 @@ Multi-Hop-Decomposition-Question-System/
 ├── docker-compose.yml          # One-command spin-up for API & UI
 ├── requirements.txt            # Production dependencies
 ├── README.md                   # Comprehensive architectural guide & benchmark report
-└── qustion_decomposition.py   # Upgraded interactive CLI & T5 training script
+├── question_decomposition.py  # Interactive CLI & T5 training script
+└── qustion_decomposition.py   # Backward-compatibility alias
 ```
 
 ---

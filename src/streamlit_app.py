@@ -184,18 +184,20 @@ with tab1:
             st.json(result)
 
 with tab2:
-    st.subheader("📊 3-Way Ablation Benchmark (n = 300 HotpotQA Validation Set)")
-    st.markdown(
-        """
-        This benchmark quantifies the performance leap achieved by replacing naive single-step RAG
-        with an **Adaptive Iterative Retrieve-Reason-Retrieve Loop**.
-        """
-    )
-
     results_file = os.path.join(os.path.dirname(__file__), "..", "benchmarks", "results", "ablation_results.json")
     if os.path.exists(results_file):
         with open(results_file, "r", encoding="utf-8") as f:
             bench_data = json.load(f)
+
+        bench_label = bench_data.get("benchmark_name", "HotpotQA Validation Split")
+        num_samples = bench_data.get("num_samples", 100)
+        st.subheader(f"📊 3-Way Ablation Benchmark ({bench_label}, n = {num_samples})")
+        st.markdown(
+            """
+            This benchmark quantifies the performance leap achieved by replacing naive single-step RAG
+            with an **Adaptive Iterative Retrieve-Reason-Retrieve Loop**.
+            """
+        )
 
         table_df = pd.DataFrame(bench_data["results"])
         st.dataframe(
@@ -225,8 +227,8 @@ with tab3:
     st.subheader("🔬 Failure Taxonomy & Error Analysis")
     st.markdown(
         """
-        Analyzing failure distribution on multi-hop benchmarks reveals the real-world operational bottlenecks
-        in complex question decomposition and retrieval systems.
+        On the unresolved query margin where the multi-hop pipeline does not achieve exact match,
+        errors categorize into four distinct operational failure modes:
         """
     )
 
