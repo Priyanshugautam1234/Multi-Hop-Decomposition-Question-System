@@ -78,17 +78,18 @@ flowchart TD
 
 ### Key Guardrails & State Management
 
-- **Dynamic Variable Binding**:  
-  Outputs structured JSON capturing intermediate dependency relationships:
-  ```json
-  {
-    "sub_question": "Which city was #1 born in?",
-    "depends_on": "hop_1",
-    "variable_placeholder": "#1",
-    "resolved_entity": "Christopher Nolan"
-  }
-  ```
-  Hop 2 dynamically replaces `#1` with the verified entity from Hop 1 before executing retrieval.
+Dynamic execution control with stateful variable binding and loop safety:
+
+```json
+{
+  "sub_question": "Which city was #1 born in?",
+  "depends_on": "hop_1",
+  "variable_placeholder": "#1",
+  "resolved_entity": "Christopher Nolan"
+}
+```
+
+- **Dynamic Variable Binding**: Hop 2 dynamically replaces `#1` with the verified entity from Hop 1 before executing retrieval.
 - **Hop Budget Ceiling**: Hard limit of `max_hops = 4` prevents runaway latency or token exhaustion.
 - **Cycle & Duplicate Query Detection**: Computes token Jaccard similarity and normalized edit distance against visited queries to detect and break infinite loops.
 - **Sufficiency & Early Stopping**: Halts the loop immediately once all dependent entities are resolved, preventing redundant retrieval hops.
@@ -134,14 +135,15 @@ We evaluated three architecture configurations across **$n = 100$ multi-hop vali
 | **Single-Hop Standard RAG** | **0.0%** | **0.0%** | **70.0%** | **27.0%** | 380.3 ms | 380.8 ms | 1.0 |
 | **Iterative Multi-Hop Decomposition (Ours)** | **50.0%** | **52.5%** | **95.0%** | **60.3%** | 492.0 ms | 1,726.5 ms | 1.7 |
 
-> **Run the benchmarks:**
-> ```bash
-> # 1. Real-World HotpotQA validation split (evaluates accuracy & realistic forward passes):
-> python benchmarks/run_multihop_eval.py --num_samples 100 --mode hotpot_qa
->
-> # 2. Synthetic Multi-Hop Stress Benchmark (stress-tests DAG routing & cycle guardrails across 300 queries):
-> python benchmarks/run_multihop_eval.py --num_samples 300 --mode synthetic
-> ```
+### 🏃 Running the Benchmarks
+
+```bash
+# 1. Real-World HotpotQA validation split (evaluates accuracy & realistic forward passes):
+python benchmarks/run_multihop_eval.py --num_samples 100 --mode hotpot_qa
+
+# 2. Synthetic Multi-Hop Stress Benchmark (stress-tests DAG routing & cycle guardrails across 300 queries):
+python benchmarks/run_multihop_eval.py --num_samples 300 --mode synthetic
+```
 
 ### Key Empirical Findings:
 - **Zero-Shot LLM (20.0% EM)**: Parametric memory resolves simple high-frequency facts, but exhibits high hallucination rates and **0.0% supporting fact recall** on multi-hop questions.
@@ -200,10 +202,10 @@ curl -X POST "http://localhost:8000/query" \
 ```json
 {
   "query": "Which city was the director of Inception born in?",
-  "final_answer": "Answer: London\n\nEvidence Chain:\n- Step 1: Who is the director of Inception? -> Christopher Nolan [Doc 1]\n- Step 2: Which city was Christopher Nolan born in? -> London [Doc 2]\n\nConclusion: Synthesizing evidence across 2 hops, the answer to 'Which city was the director of Inception born in?' is London.",
+  "final_answer": "Answer: London\n\nEvidence Chain:\nStep 1: Who is the director of Inception? -> Christopher Nolan [Doc 1]\nStep 2: Which city was Christopher Nolan born in? -> London [Doc 2]\n\nConclusion: Synthesizing evidence across 2 hops, the answer to 'Which city was the director of Inception born in?' is London.",
   "abstained": false,
   "total_hops": 2,
-  "total_latency_ms": 1.25,
+  "total_latency_ms": 485.4,
   "total_tokens_used": 142,
   "bound_variables": {
     "hop_1": "Christopher Nolan",
@@ -230,7 +232,7 @@ curl -X POST "http://localhost:8000/query" \
       ],
       "intermediate_answer": "Based on [Doc 1], the answer to 'Who is the director of Inception?' is Christopher Nolan.",
       "has_enough_evidence": true,
-      "latency_ms": 0.62,
+      "latency_ms": 238.1,
       "tokens_used": 68
     },
     {
@@ -253,7 +255,7 @@ curl -X POST "http://localhost:8000/query" \
       ],
       "intermediate_answer": "Based on [Doc 2], the answer to 'Which city was Christopher Nolan born in?' is London.",
       "has_enough_evidence": true,
-      "latency_ms": 0.58,
+      "latency_ms": 247.3,
       "tokens_used": 74
     }
   ]

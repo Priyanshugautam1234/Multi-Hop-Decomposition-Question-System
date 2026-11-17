@@ -180,7 +180,7 @@ class EvidenceSynthesizer:
         synthesis_lines.append("")
         synthesis_lines.append("Evidence Chain:")
         for step in cited_steps:
-            synthesis_lines.append(f"- {step}")
+            synthesis_lines.append(f"{step}")
         synthesis_lines.append("")
         synthesis_lines.append(
             f"Conclusion: Synthesizing evidence across {len(hop_answers)} hops, the answer to '{root_question}' is {final_entity}."
