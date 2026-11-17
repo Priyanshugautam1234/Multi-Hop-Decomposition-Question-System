@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Caches and virtual environments
+.pytest_cache/
+.coverage
+htmlcov/
+.venv/
+venv/
+env/
+
+# Large Model weights (>100MB causes GitHub push rejection)
+*.safetensors
+*.bin
+*.pt
+*.pth
+/results/
+t5-decomposition/*.safetensors
+
+# OS & IDE
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

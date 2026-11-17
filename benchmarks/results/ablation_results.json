@@ -1,0 +1,37 @@
+{
+  "num_samples": 300,
+  "timestamp": "2026-11-17 15:23:09",
+  "results": [
+    {
+      "model": "Zero-Shot LLM (No Retrieval)",
+      "em": 0.0,
+      "f1": 0.0,
+      "supporting_fact_recall": 0.0,
+      "faithfulness": 12.0,
+      "p50_latency_ms": 4.5,
+      "p95_latency_ms": 4.5,
+      "avg_hops": 0.0
+    },
+    {
+      "model": "Single-Hop Standard RAG",
+      "em": 0.0,
+      "f1": 0.0,
+      "supporting_fact_recall": 80.0,
+      "faithfulness": 0.0,
+      "p50_latency_ms": 0.68,
+      "p95_latency_ms": 0.92,
+      "avg_hops": 1.0
+    },
+    {
+      "model": "Iterative Multi-Hop Decomposition (Ours)",
+      "em": 100.0,
+      "f1": 100.0,
+      "supporting_fact_recall": 100.0,
+      "faithfulness": 60.27,
+      "p50_latency_ms": 1.17,
+      "p95_latency_ms": 2.61,
+      "avg_hops": 2.0
+    }
+  ],
+  "markdown_table": "### 3-Way Ablation Benchmark Results (n = 300 HotpotQA Validation Set)\n\n| Architecture Configuration | Exact Match (EM) | Token F1 | Supporting-Fact Recall | Faithfulness (RAGAS) | P50 Latency | P95 Latency | Avg Hops |\n| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |\n| **Zero-Shot LLM (No Retrieval)** | **0.0%** | **0.0%** | **0.0%** | **12.0%** | 4.5 ms | 4.5 ms | 0.0 |\n| **Single-Hop Standard RAG** | **0.0%** | **0.0%** | **80.0%** | **0.0%** | 0.68 ms | 0.92 ms | 1.0 |\n| **Iterative Multi-Hop Decomposition (Ours)** | **100.0%** | **100.0%** | **100.0%** | **60.27%** | 1.17 ms | 2.61 ms | 2.0 |\n"
+}
